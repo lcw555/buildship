@@ -212,8 +212,8 @@ bash scripts/e2e-agent-smoke.sh    # 自起 Agent、自建站点、跑完自动�
 | 产物 | 路径 | 大小 | 结果 |
 | --- | --- | --- | --- |
 | Release exe | `target/release/buildship.exe` | 7.8 MB | ✅ PE Subsystem = 2 (GUI) |
-| NSIS 安装包 | `target/release/bundle/nsis/Buildship_0.2.1_x64-setup.exe` | 3.05 MiB | ✅ |
-| MSI 安装包 | `target/release/bundle/msi/Buildship_0.2.1_x64_{en-US,zh-CN}.msi` | 4.17 / 4.16 MiB | ✅（WiX 3.14 离线预置后 `candle` + `light` 均通过） |
+| NSIS 安装包 | `target/release/bundle/nsis/Buildship_0.2.3_x64-setup.exe` | 3.22 MiB | ✅ |
+| MSI 安装包 | `target/release/bundle/msi/Buildship_0.2.3_x64_{en-US,zh-CN}.msi` | 4.35 / 4.34 MiB | ✅（WiX 3.14 离线预置后 `candle` + `light` 均通过） |
 | Agent（release） | `target/release/deploy-agent.exe` | 2.4 MB | ✅（`--check` 自检通过） |
 
 > 打包机在受限网络下首次 `tauri build` 会因下载 NSIS / WiX 失败（`peer closed connection`
@@ -380,4 +380,40 @@ bash scripts/e2e-agent-smoke.sh    # 自起 Agent、自建站点、跑完自动�
 | 右侧「最近发布」比左侧低一截、底边不齐 | `.card + .card { margin-top: 16px }` 在双栏网格里同样生效，把第二列整体推下 16px | `.grid-2 > .card + .card { margin-top: 0 }` |
 | 侧栏「数据目录」长路径被裁 | 路径 `word-break: break-all` 换行成多行，把底部区块撑出可视区 | 改单行 `ellipsis` + `title` 悬浮显示完整路径；侧栏加 `overflow-y: auto` 兜底 |
 
+
+
+### 7.12 主内容区无法滚动、侧栏页脚被裁
+
+**现象**：工作台「最近项目」、设置「数据与备份」两张卡片在窗口底部被切断，页面没有竖向滚动条；
+左侧栏底部的「数据目录」只露出半截。
+
+**根因**（与视觉无关，是 CSS 高度链断了）：
+
+```
+.app-shell  height: 100vh; overflow: hidden      ← 窗口高度锁死
+  .main     grid 子项，min-height 默认 auto      ← 被内容撑到内容高度
+    .content  flex: 1; overflow: auto            ← 父级没有高度约束，永不触发
+```
+
+grid 子项的 `min-height` 初始值是 `auto`（不是 0），所以 `.main` 会随着内容一起长高，
+`.content` 从来没有"溢出"过，`overflow: auto` 形同虚设；多出来的部分被外层 `overflow: hidden` 直接切掉。
+
+**修复**：
+
+| 位置 | 改动 |
+| --- | --- |
+| `.main` | 显式 `min-height: 0` + `overflow: hidden`，把滚动交回 `.content` |
+| `.sidebar` | 同样 `min-height: 0`，并改为 `overflow: hidden` |
+| `.sidebar-nav`（新增） | 导航区 `flex: 1; min-height: 0; overflow-y: auto` —— 品牌与「数据目录」固定，中间导航单独滚 |
+| `.brand` | `flex: none`，不被压缩 |
+
+**实测**（Playwright + 本机 Edge，加载真实构建产物 `dist/`）：
+
+| 视口 | 页面溢出 | 内容区可滚 | 导航可滚 | 页脚底边 / 视口高 |
+| --- | --- | --- | --- | --- |
+| 1050×640 | 0 | ✅ 1946 > 571 | 否（放得下） | 622 / 640 |
+| 1050×480 | 0 | ✅ | ✅ | 462 / 480 |
+| 900×600 | 0 | ✅ | 否 | 582 / 600 |
+
+三项都是"页面本身不溢出、滚动发生在内容区、侧栏页脚始终完整可见"。
 

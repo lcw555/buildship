@@ -492,7 +492,7 @@ dependencies = [
 
 [[package]]
 name = "buildship"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "buildship-artifact",
  "buildship-build",
@@ -521,7 +521,7 @@ dependencies = [
 
 [[package]]
 name = "buildship-artifact"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "buildship-common",
  "chrono",
@@ -537,7 +537,7 @@ dependencies = [
 
 [[package]]
 name = "buildship-build"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "buildship-common",
  "buildship-domain",
@@ -554,7 +554,7 @@ dependencies = [
 
 [[package]]
 name = "buildship-common"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "chrono",
  "dirs 6.0.0",
@@ -574,7 +574,7 @@ dependencies = [
 
 [[package]]
 name = "buildship-db"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "buildship-common",
  "buildship-domain",
@@ -592,7 +592,7 @@ dependencies = [
 
 [[package]]
 name = "buildship-domain"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "buildship-common",
  "chrono",
@@ -605,7 +605,7 @@ dependencies = [
 
 [[package]]
 name = "buildship-release"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "buildship-common",
  "chrono",
@@ -1098,7 +1098,7 @@ dependencies = [
 
 [[package]]
 name = "deploy-agent"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "axum",
  "buildship-artifact",

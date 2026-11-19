@@ -89,7 +89,8 @@ async function quickBuild() {
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <AuroraMark :size="30" />
+        <!-- 侧栏品牌图标保持静止：常驻的持续自转在阅读界面里会分散注意力 -->
+        <AuroraMark :size="30" :animated="false" />
         <div>
           <div class="brand-name">Buildship</div>
           <div class="brand-sub">FRONTEND RELEASE STUDIO</div>

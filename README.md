@@ -241,8 +241,8 @@ Web 服务器（IIS / nginx）站点根目录指向 `<physicalPath>\current`，
 | 自动化测试 | `cargo test --workspace` → 50 通过 / 0 失败 |
 | 静态检查 | `cargo clippy -D warnings` 8 个目标 0 警告；`vue-tsc --noEmit` 0 错误 |
 | Windows 构建 | 已在本机验证（release exe 7.8 MB） |
-| Windows 安装包（NSIS） | 已产出：`Buildship_0.2.1_x64-setup.exe` 3.05 MiB |
-| Windows 安装包（MSI） | 已产出：`Buildship_0.2.1_x64_en-US.msi` 4.17 MiB、`zh-CN` 4.16 MiB（WiX 离线预置） |
+| Windows 安装包（NSIS） | 已产出：`Buildship_0.2.3_x64-setup.exe` 3.22 MiB |
+| Windows 安装包（MSI） | 已产出：`Buildship_0.2.3_x64_en-US.msi` 4.35 MiB、`zh-CN` 4.34 MiB（WiX 离线预置） |
 | macOS 构建与实机验收 | **未验证**（无 Mac 设备，代码已按 `cfg(target_os)` 分支实现，不标记为已验收） |
 
 ## 许可
