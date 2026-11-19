@@ -195,12 +195,11 @@ onUnmounted(() => {
   height: 62px;
   padding: 0 10px;
   border-radius: 31px;
-  /* 真透明：只留一层极淡的玻璃高光 + 白色描边。
-     Windows 的 WebView2 在透明窗口里拿不到桌面内容做采样，
-     backdrop-filter 会渲染成一块灰底，这里干脆不用。 */
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 6px 18px rgba(20, 45, 90, 0.1);
+  /* 不透明面板：悬浮窗是透明窗口，底下的桌面深浅不可控，
+     半透明底色会让按钮直接糊在壁纸上看不清，这里用实心白底。 */
+  background: linear-gradient(180deg, #ffffff 0%, #f3f8ff 100%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 30px rgba(20, 45, 90, 0.22), 0 0 0 1px rgba(120, 150, 200, 0.12);
 }
 
 .action {
@@ -213,12 +212,10 @@ onUnmounted(() => {
   border: none;
   border-radius: 14px;
   background: transparent;
-  color: #2c3c55;
+  color: #22314a;
   font-size: 11px;
   font-family: var(--bs-font);
   cursor: pointer;
-  /* 透明底上文字容易糊，用一层白色微光把笔画托起来 */
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.75);
   transition: background 160ms ease, color 160ms ease, transform 160ms ease;
   animation: rise 240ms ease both;
   animation-delay: calc(var(--i) * 32ms);
@@ -230,7 +227,7 @@ onUnmounted(() => {
 }
 
 .action:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(47, 107, 255, 0.12);
   color: #1f57e0;
   transform: translateY(-1px);
 }
@@ -240,7 +237,7 @@ onUnmounted(() => {
 }
 
 .action:disabled {
-  color: #a8b6c9;
+  color: #9aa8bd;
   cursor: not-allowed;
 }
 
@@ -248,7 +245,7 @@ onUnmounted(() => {
   width: 1px;
   height: 32px;
   margin: 0 4px;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(20, 45, 90, 0.12);
 }
 
 .orb {

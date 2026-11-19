@@ -185,10 +185,17 @@ pub fn find_uninstaller() -> Option<PathBuf> {
 /// `/S` 是 NSIS 的静默参数：Tauri 模板在静默模式下会直接结束仍在运行的应用，
 /// 因此不需要我们先退出，卸载器自己会处理。
 fn launch_uninstaller(path: &Path) -> AppResult<()> {
-    std::process::Command::new(path)
-        .arg("/S")
-        .current_dir(path.parent().unwrap_or_else(|| Path::new(".")))
-        .spawn()
+    let mut cmd = std::process::Command::new(path);
+    cmd.arg("/S")
+        .current_dir(path.parent().unwrap_or_else(|| Path::new(".")));
+    // 卸载器是控制台程序，静默模式下也不能闪黑框
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    cmd.spawn()
         .map_err(|err| AppError::io(format!("启动卸载程序失败：{err}")))?;
     Ok(())
 }

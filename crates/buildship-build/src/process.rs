@@ -155,6 +155,16 @@ impl CommandSpec {
             cmd.env(key, value);
         }
 
+        #[cfg(windows)]
+        {
+            // 本应用是 GUI 子系统进程（没有控制台）。启动控制台子进程时，
+            // Windows 会为它新建一个控制台窗口并弹到桌面上——这正是用户看到的
+            // 那个标题为 `...\yarn.exe` 的黑框。
+            // CREATE_NO_WINDOW 让它无窗口运行，stdout/stderr 仍走我们接好的管道。
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+
         #[cfg(unix)]
         {
             use std::os::unix::process::CommandExt;
@@ -179,12 +189,18 @@ pub async fn kill_tree(child: &mut Child) -> AppResult<()> {
 
     if cfg!(windows) {
         // taskkill 递归终止子进程（npm → node → vite 等）
-        let status = Command::new("taskkill")
+        let mut killer = Command::new("taskkill");
+        killer
             .args(["/PID", &pid.to_string(), "/T", "/F"])
             .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .await;
+            .stderr(Stdio::null());
+        // 同样是控制台程序，别让它闪一下黑框
+        #[cfg(windows)]
+        {
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            killer.creation_flags(CREATE_NO_WINDOW);
+        }
+        let status = killer.status().await;
         match status {
             Ok(_) => {}
             Err(e) => tracing::warn!(pid, error = %e, "taskkill 调用失败，回退到直接 kill"),

@@ -417,3 +417,33 @@ grid 子项的 `min-height` 初始值是 `auto`（不是 0），所以 `.main` �
 
 三项都是"页面本身不溢出、滚动发生在内容区、侧栏页脚始终完整可见"。
 
+
+### 7.13 构建时弹出 cmd 黑框（子进程控制台窗口）
+
+**现象**：点「构建」后桌面弹出一个标题为 `C:\Program Files\Volta\yarn.exe` 的黑框，
+里面是构建输出，关掉它构建就中断。
+
+**根因**：应用是 `windows_subsystem = "windows"` 的 GUI 进程，自身没有控制台。
+Windows 在 GUI 进程里 `CreateProcess` 一个**控制台子系统**的可执行文件（`cmd.exe`、`yarn.exe`、
+`taskkill.exe`、`uninstall.exe`）时，若没有显式指定创建标志，系统会为子进程**新建一个控制台窗口**
+并显示在桌面上。把 `stdout/stderr` 接成管道并不能阻止控制台窗口被创建。
+
+**修复**：所有控制台子进程一律带 `CREATE_NO_WINDOW`（`0x0800_0000`）：
+
+| 位置 | 子进程 |
+| --- | --- |
+| `crates/buildship-build/src/process.rs` `CommandSpec::spawn` | 构建命令（`cmd.exe /d /c yarn build` 及其子孙进程） |
+| `crates/buildship-build/src/process.rs` `kill_tree` | `taskkill /T /F` |
+| `apps/desktop/src-tauri/src/services/maintenance.rs` `launch_uninstaller` | `uninstall.exe /S` |
+
+**实测**（`pythonw.exe` 作为 GUI 父进程，子进程为 `cmd.exe /d /c ping`，
+用 `EnumWindows` 统计 `ConsoleWindowClass` 数量）：
+
+| 启动方式 | 控制台窗口增量 |
+| --- | --- |
+| 不带标志 | **+1**（就是用户看到的黑框） |
+| `CREATE_NO_WINDOW` | **0** |
+
+注意：如果父进程本身挂在某个控制台上（例如从 cmd / PowerShell 里跑 `cargo test`），
+子进程会**继承**那个控制台而不再新建窗口，此时测不出差异——必须用 GUI 父进程复现。
+
