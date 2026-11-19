@@ -1,0 +1,71 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/buildship-common",
+    "crates/buildship-domain",
+    "crates/buildship-db",
+    "crates/buildship-build",
+    "crates/buildship-artifact",
+    "crates/buildship-release",
+    "apps/desktop/src-tauri",
+    "deploy-agent",
+]
+
+[workspace.package]
+version = "0.2.3"
+edition = "2021"
+rust-version = "1.77"
+license = "MIT"
+
+[workspace.dependencies]
+buildship-common = { path = "crates/buildship-common" }
+buildship-domain = { path = "crates/buildship-domain" }
+buildship-db = { path = "crates/buildship-db" }
+buildship-build = { path = "crates/buildship-build" }
+buildship-artifact = { path = "crates/buildship-artifact" }
+buildship-release = { path = "crates/buildship-release" }
+
+axum = { version = "0.8", features = ["macros"] }
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "4", features = ["derive", "env"] }
+dirs = "6"
+# 构建日志里的 GBK 控制台输出需要按 GBK 解码
+encoding_rs = "0.8"
+futures-util = "0.3"
+hex = "0.4"
+keyring = "3"
+reqwest = { version = "0.12", default-features = false, features = ["json", "native-tls", "stream", "multipart"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio",
+    "sqlite",
+    "chrono",
+    "uuid",
+    "migrate",
+    "json",
+    # Type / FromRow 派生与 migrate! 宏都需要 macros
+    "macros",
+    "derive",
+] }
+tempfile = "3"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io"] }
+toml = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["trace", "limit"] }
+tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+walkdir = "2"
+zip = { version = "2", default-features = false, features = ["deflate", "time"] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  简体中文 MSI 本地化。
+  WixUI 的内置对话框文案由 WixUIExtension 自带的中文语言段提供，
+  这里只需要覆盖 Tauri 模板自定义的几条文案（main.wxs 里的 !(loc.*)）。
+  注意：MSI 字符串按 Codepage 编码存放（936 = GBK），不是 UTF-16。
+-->
+<WixLocalization Culture="zh-cn" Codepage="936" xmlns="http://schemas.microsoft.com/wix/2006/localization">
+  <String Id="TauriLanguage">2052</String>
+  <String Id="TauriCodepage">936</String>
+  <String Id="LaunchApp">启动 Buildship</String>
+  <String Id="DowngradeErrorMessage">已安装更高版本的 Buildship，请先卸载后再安装此版本。</String>
+  <String Id="PathEnvVarFeature">将 Buildship 的安装目录加入系统 PATH 环境变量，以便在任意位置调用命令行。</String>
+  <String Id="InstallAppFeature">安装 Buildship 桌面应用。</String>
+</WixLocalization>

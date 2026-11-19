@@ -1,0 +1,717 @@
+@import "./tokens.css";
+
+/* ------------------------------------------------------------------ */
+/* 基础布局                                                            */
+/* ------------------------------------------------------------------ */
+.app-shell {
+  display: grid;
+  grid-template-columns: 224px minmax(0, 1fr);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 14px;
+  background: var(--bs-surface);
+  border-right: 1px solid var(--bs-border);
+  /* 同样受限于 100vh：导航区自己滚动，底部数据目录常驻可见 */
+  min-height: 0;
+  overflow: hidden;
+}
+
+/*
+ * 导航独立滚动：品牌与底部的数据目录固定，窗口压矮时只滚中间这一段。
+ * 之前整个侧栏滚动，底部的「数据目录」会被挤出可视区、看起来像被裁掉。
+ */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin: 0 -6px;
+  padding: 0 6px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 18px;
+  flex: none;
+}
+
+.brand-name {
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--bs-muted);
+  letter-spacing: 0.4px;
+}
+
+.nav-group-label {
+  padding: 12px 10px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: var(--bs-muted);
+  text-transform: uppercase;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--bs-radius-sm);
+  color: var(--bs-text-2);
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 160ms ease, color 160ms ease;
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background: var(--bs-primary-soft-2);
+  color: var(--bs-text);
+}
+
+.nav-item.router-link-active {
+  background: var(--bs-primary-soft);
+  color: var(--bs-primary);
+  font-weight: 600;
+}
+
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  opacity: 0.85;
+}
+
+.nav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--bs-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  flex: none;
+  padding: 10px;
+  border-radius: var(--bs-radius);
+  background: var(--bs-primary-soft-2);
+  font-size: 12px;
+  color: var(--bs-muted);
+  line-height: 1.6;
+}
+
+/* 数据目录是长路径：单行省略，悬停看完整值，避免把底部区块撑出可视区 */
+.sidebar-footer .footer-path {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * grid 子项的 min-height 默认是 auto：内容一高，.main 就被撑到内容高度，
+ * 于是 .content 的 overflow: auto 永远不触发，外层 .app-shell 又是
+ * height: 100vh + overflow: hidden，表现为内容底部被直接切掉、没有滚动条。
+ * 显式 min-height: 0 让 .main 受限于 100vh，滚动交回 .content。
+ */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bs-bg);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 26px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--bs-border);
+}
+
+.topbar-title {
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.topbar-sub {
+  font-size: 12px;
+  color: var(--bs-muted);
+  margin-top: 2px;
+}
+
+.topbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 22px 26px 40px;
+  /* 列方向 flex：需要撑满整屏的页面（如构建任务）用 flex:1 精确占位，
+     不影响普通页面的自然高度 */
+  display: flex;
+  flex-direction: column;
+}
+
+.content > * {
+  flex: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* 卡片与表格                                                          */
+/* ------------------------------------------------------------------ */
+.card {
+  background: var(--bs-surface);
+  border: 1px solid var(--bs-border);
+  border-radius: var(--bs-radius-lg);
+  box-shadow: var(--bs-shadow-sm);
+  overflow: hidden;
+}
+
+.card + .card {
+  margin-top: 16px;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--bs-border);
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 640;
+}
+
+.card-desc {
+  font-size: 12px;
+  color: var(--bs-muted);
+  margin-top: 2px;
+}
+
+.card-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.card-body {
+  padding: 16px 18px;
+}
+
+.card-body.tight {
+  padding: 0;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 14px;
+}
+
+.stat-card {
+  position: relative;
+  padding: 16px 16px 14px;
+  background: var(--bs-surface);
+  border: 1px solid var(--bs-border);
+  border-radius: var(--bs-radius-lg);
+  box-shadow: var(--bs-shadow-sm);
+  overflow: hidden;
+}
+
+.stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto auto;
+  width: 84px;
+  height: 84px;
+  background: radial-gradient(circle at 70% 30%, rgba(47, 107, 255, 0.12), transparent 70%);
+  pointer-events: none;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--bs-muted);
+  letter-spacing: 0.2px;
+}
+
+.stat-value {
+  margin-top: 8px;
+  font-size: 26px;
+  font-weight: 680;
+  letter-spacing: -0.4px;
+}
+
+.stat-foot {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--bs-muted);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bs-muted);
+  background: var(--bs-surface-2);
+  border-bottom: 1px solid var(--bs-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--bs-border);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--bs-primary-soft-2);
+}
+
+.table .mono {
+  font-family: var(--bs-mono);
+  font-size: 12px;
+  color: var(--bs-text-2);
+}
+
+.table-empty {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--bs-muted);
+  font-size: 13px;
+}
+
+.cell-main {
+  font-weight: 560;
+}
+
+.cell-sub {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--bs-muted);
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* 徽标                                                                */
+/* ------------------------------------------------------------------ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 560;
+  white-space: nowrap;
+  background: #eef2f8;
+  color: var(--bs-text-2);
+}
+
+.badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+}
+
+.badge.plain::before {
+  display: none;
+}
+
+.badge.success {
+  background: var(--bs-success-soft);
+  color: var(--bs-success);
+}
+
+.badge.danger {
+  background: var(--bs-danger-soft);
+  color: var(--bs-danger);
+}
+
+.badge.warning {
+  background: var(--bs-warning-soft);
+  color: var(--bs-warning);
+}
+
+.badge.info {
+  background: var(--bs-info-soft);
+  color: var(--bs-info);
+}
+
+.badge.neutral {
+  background: #eef2f8;
+  color: var(--bs-muted);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  background: var(--bs-primary-soft-2);
+  border: 1px solid var(--bs-border);
+  font-size: 12px;
+  color: var(--bs-text-2);
+}
+
+.chip.mono {
+  font-family: var(--bs-mono);
+  font-size: 11px;
+}
+
+/* ------------------------------------------------------------------ */
+/* 表单                                                                */
+/* ------------------------------------------------------------------ */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.form-grid .full {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bs-text-2);
+  margin-bottom: 6px;
+  display: block;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--bs-muted);
+  margin-top: 5px;
+  line-height: 1.5;
+}
+
+.inline-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-height: 56px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: var(--bs-surface);
+  border: 1px solid var(--bs-border);
+  border-radius: var(--bs-radius-lg);
+  box-shadow: var(--bs-shadow-sm);
+}
+
+/* 工具条内控件统一高度，避免下拉框与按钮高低错落 */
+.toolbar > * {
+  flex: none;
+}
+
+.toolbar .n-button {
+  --n-height: 34px;
+  height: 34px;
+}
+
+.toolbar .n-base-selection {
+  --n-height: 34px;
+  min-height: 34px;
+}
+
+.toolbar > .spacer {
+  flex: 1;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* 日志控制台                                                          */
+/* ------------------------------------------------------------------ */
+.log-console {
+  height: 100%;
+  min-height: 240px;
+  overflow: auto;
+  padding: 12px 14px;
+  background: #0f1a2b;
+  color: #d7e3f4;
+  font-family: var(--bs-mono);
+  font-size: 12px;
+  line-height: 1.65;
+  border-radius: var(--bs-radius);
+}
+
+.log-line {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  column-gap: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-line.stderr {
+  color: #ffb4a8;
+}
+
+.log-line.system {
+  color: #8fd6ff;
+}
+
+.log-line .seq {
+  color: #52657f;
+  user-select: none;
+  margin-right: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* 其它                                                                */
+/* ------------------------------------------------------------------ */
+.empty-state {
+  padding: 42px 20px;
+  text-align: center;
+  color: var(--bs-muted);
+}
+
+.empty-title {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--bs-text-2);
+}
+
+.empty-desc {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.link {
+  color: var(--bs-primary);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 12px;
+  padding-bottom: 14px;
+  position: relative;
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 14px;
+  bottom: 0;
+  width: 1px;
+  background: var(--bs-border);
+}
+
+.timeline-item:last-child::before {
+  display: none;
+}
+
+.timeline-dot {
+  width: 13px;
+  height: 13px;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: var(--bs-primary-soft);
+  border: 2px solid var(--bs-primary);
+}
+
+.timeline-dot.error {
+  background: var(--bs-danger-soft);
+  border-color: var(--bs-danger);
+}
+
+.timeline-dot.warn {
+  background: var(--bs-warning-soft);
+  border-color: var(--bs-warning);
+}
+
+.timeline-body {
+  font-size: 13px;
+}
+
+.timeline-time {
+  font-size: 11.5px;
+  color: var(--bs-muted);
+  margin-top: 3px;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 8px 12px;
+  font-size: 13px;
+}
+
+.kv dt {
+  color: var(--bs-muted);
+}
+
+.kv dd {
+  margin: 0;
+  color: var(--bs-text);
+  word-break: break-all;
+}
+
+.progress-track {
+  height: 6px;
+  border-radius: 4px;
+  background: #e8eefa;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--bs-primary), var(--bs-accent));
+  transition: width 260ms ease;
+}
+
+.muted {
+  color: var(--bs-muted);
+}
+
+.mono {
+  font-family: var(--bs-mono);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* 双栏卡片等高：表头固定、内容区撑满，空状态在剩余空间里垂直居中 */
+.grid-2 > .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 双栏间距由 gap 控制，右边这张卡不能再吃「相邻兄弟」的 16px 上边距，
+   否则它的表头会比左边低一截、底边也缩不齐 */
+.grid-2 > .card + .card {
+  margin-top: 0;
+}
+
+.grid-2 > .card > .card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-2 > .card > .card-body > .n-spin-container,
+.grid-2 > .card > .card-body > .n-spin-container > .n-spin-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-2 > .card .empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (max-width: 1080px) {
+  .grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

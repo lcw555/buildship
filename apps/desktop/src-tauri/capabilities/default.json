@@ -1,0 +1,20 @@
+{
+  "identifier": "default",
+  "description": "Buildship 桌面端最小权限集合：只开放窗口拖拽、目录选择、打开路径与事件通信",
+  "windows": ["main", "floating"],
+  "permissions": [
+    "core:default",
+    "core:event:allow-emit",
+    "core:event:allow-emit-to",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize",
+    "dialog:allow-open",
+    "opener:allow-open-path"
+  ]
+}

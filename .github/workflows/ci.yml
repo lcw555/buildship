@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ---------------------------------------------------------------- Rust 检查与测试
+  rust:
+    name: Rust (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: 缓存 cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: 格式检查
+        run: cargo fmt --all -- --check
+
+      - name: Clippy（业务 crate，警告即失败）
+        run: >
+          cargo clippy
+          -p buildship-common -p buildship-domain -p buildship-db
+          -p buildship-build -p buildship-artifact -p buildship-release
+          -p deploy-agent --all-targets -- -D warnings
+
+      - name: 单元测试与集成测试
+        # 不加 --all-targets：桌面端装配 crate 显式 test = false（需 WebView2 运行环境）
+        run: cargo test --workspace -- --nocapture
+
+      - name: 构建 deploy-agent（release）
+        run: cargo build -p deploy-agent --release
+
+      - name: 上传 deploy-agent 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-agent-${{ matrix.os }}
+          path: |
+            target/release/deploy-agent
+            target/release/deploy-agent.exe
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------- 前端类型与构建
+  frontend:
+    name: 前端（typecheck + build）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: 安装依赖（锁定版本）
+        run: npm ci
+
+      - name: 类型检查
+        run: npx vue-tsc --noEmit
+
+      - name: 构建渲染层
+        run: npm run build
+
+      - name: 上传前端产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-dist
+          path: apps/desktop/dist
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------- 桌面端安装包
+  bundle:
+    name: 安装包（${{ matrix.label }}）
+    needs: [rust, frontend]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows
+          - os: macos-latest
+            label: macOS
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: 安装 Rust 工具链
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 缓存 cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - run: npm ci
+
+      - name: 打包（Windows: NSIS + MSI / macOS: DMG）
+        run: npm run tauri build
+        env:
+          # CI 中跳过签名，正式发布由 release 工作流注入证书
+          TAURI_SIGNING_PRIVATE_KEY: ""
+          CI: true
+
+      - name: 上传安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.label }}
+          path: |
+            target/release/bundle/**
+          if-no-files-found: error

@@ -1,0 +1,21 @@
+node_modules/
+dist/
+dist-floating/
+target/
+.DS_Store
+*.log
+.idea/
+.vscode/
+*.local
+apps/desktop/src-tauri/gen/
+coverage/
+
+# 本地布局探针与临时产物
+.tmp-layout/
+.tmp-*/
+*.console-bak
+*.bak
+
+# 环境变量与凭据
+.env
+.env.*

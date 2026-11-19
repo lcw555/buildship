@@ -1,0 +1,52 @@
+[package]
+name = "buildship"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Buildship 桌面端（Tauri 2）"
+
+[lib]
+name = "buildship_lib"
+# 桌面端只需要被 main.rs 静态链接；去掉 cdylib/staticlib 可避免
+# rustc 生成全量导出表（Windows GNU 工具链下会触发 ld 的
+# "export ordinal too large"，导出符号超过 6.5 万）。
+crate-type = ["rlib"]
+# 这个 crate 只做装配（窗口、托盘、命令注册），业务逻辑都在 crates/* 里并有单测。
+# 测试宿主会动态链接 WebView2Loader.dll，在无 GUI 环境无法启动，故不生成测试目标。
+test = false
+doctest = false
+
+[[bin]]
+name = "buildship"
+path = "src/main.rs"
+test = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+buildship-common = { workspace = true }
+buildship-domain = { workspace = true }
+buildship-db = { workspace = true }
+buildship-build = { workspace = true }
+buildship-artifact = { workspace = true }
+buildship-release = { workspace = true }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+sqlx = { workspace = true }
+thiserror = { workspace = true }
+keyring = { workspace = true, features = ["windows-native", "apple-native"] }
+dirs = { workspace = true }
+futures-util = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Console", "Win32_Storage_FileSystem"] }

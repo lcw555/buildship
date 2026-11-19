@@ -1,0 +1,16 @@
+# 统一换行：仓库内一律 LF，避免 Windows / macOS 协作时整文件 diff
+* text=auto eol=lf
+
+# 二进制资源不做换行转换，也不参与文本 diff
+*.png binary
+*.jpg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.dll binary
+*.exe binary
+*.zip binary
+
+# Shell 脚本保持 LF 且可执行
+*.sh text eol=lf
