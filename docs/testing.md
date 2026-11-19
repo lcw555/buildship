@@ -447,3 +447,13 @@ Windows 在 GUI 进程里 `CreateProcess` 一个**控制台子系统**的可执�
 注意：如果父进程本身挂在某个控制台上（例如从 cmd / PowerShell 里跑 `cargo test`），
 子进程会**继承**那个控制台而不再新建窗口，此时测不出差异——必须用 GUI 父进程复现。
 
+**端到端复现**：`crates/buildship-build/examples/console_window_probe.rs` 是一个
+`windows_subsystem = "windows"` 的探针程序，内部走**真实的** `CommandSpec::spawn`
+启动 `cmd.exe /d /c ping`。先用 `cargo build --example console_window_probe -p buildship-build`
+编译，运行期间用外部脚本采样 `ConsoleWindowClass` 数量：
+
+| 被测对象 | 控制台窗口增量 | 结论 |
+| --- | --- | --- |
+| `pythonw.exe` + 子进程不带标志（反向对照） | +1 | 能正确检出黑框 |
+| `console_window_probe.exe` + `CREATE_NO_WINDOW` | **0** | 通过 |
+
