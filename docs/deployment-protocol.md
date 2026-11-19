@@ -24,7 +24,7 @@
 ```json
 {
   "apiVersion": "1",
-  "agentVersion": "0.2.5",
+  "agentVersion": "0.2.6",
   "hostname": "WEB-PROD-01",
   "os": "windows x86_64",
   "uptimeSeconds": 86400,

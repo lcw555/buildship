@@ -457,3 +457,42 @@ Windows 在 GUI 进程里 `CreateProcess` 一个**控制台子系统**的可执�
 | `pythonw.exe` + 子进程不带标志（反向对照） | +1 | 能正确检出黑框 |
 | `console_window_probe.exe` + `CREATE_NO_WINDOW` | **0** | 通过 |
 
+
+### 7.14 真实项目全链路（构建 → 打包 → 发布 → 回滚）
+
+`scripts/e2e-agent-smoke.sh` 用的是构造的 ZIP，只覆盖 Agent 侧；这里补的是**真实前端工程**
+走完整个链路，且构建与打包调用的是桌面端同一批库。
+
+工具：`crates/buildship-release/examples/real_e2e.rs`（内部依次调用
+`BuildRunner` → `buildship_artifact::package` → `verify_package` → `DeployClient`）。
+
+```bash
+# 1. 准备一个真实工程（Vue 3 + Vite），并在本机起 Agent 与静态站点
+cargo run -p buildship-release --example real_e2e -- \
+  --project .tmp-e2e/portfolio --site .tmp-e2e/site \
+  --agent http://127.0.0.1:7802 --token <token> \
+  --health http://127.0.0.1:8099/current/index.html
+```
+
+实测结果（0 项异常）：
+
+| 步骤 | 结果 |
+| --- | --- |
+| `yarn install`（真实依赖安装） | Succeeded，118s（首次）/ 0.3s（缓存） |
+| `yarn build`（vite 生产构建） | Succeeded，2.1s |
+| 打包 + 校验 | 3 文件 / 28116 字节，`verify ok=true` |
+| 上传 v1 / 应用 v1 | `health=passed`，HTTP 200 |
+| 改标题重新构建 → v2 | 构建 2.2s，`previous=v1` |
+| 应用 v2 | 线上 `index.html` 已切换到 v2 产物 |
+| 回滚 v1 | 线上内容与 v1 逐字节一致 |
+
+**这一轮暴露并修掉的两个真 bug**（都是"只有真实链路才会踩到"的类型）：
+
+| 问题 | 现象 | 根因 | 修法 |
+| --- | --- | --- | --- |
+| 标准 Node 环境下构建第一步就挂 | `program not found` / `os error 193` | `CreateProcess` 只自动补 `.exe`；npm/yarn/pnpm 常是 `.cmd` 垫片；而 `resolve_binary` 又会优先返回同目录下**无扩展名**的 shell 脚本 | `CommandSpec::to_spawn` 先按 PATH/PATHEXT 解析成真实文件；解析时名字无扩展名就只认 PATHEXT，不再采用同名无扩展名文件 |
+| 发布被 Agent 拒为越权 | `physicalPath 与 Agent 登记的站点目录不一致` | 客户端把路径 `canonicalize()` 后带上 `\\?\` 长路径前缀，与服务端登记的普通路径字符串不等 | `normalize_lexically` 比较前先 `strip_verbatim`（`\\?\C:\x → C:\x`，`\\?\UNC\srv\s → \\srv\s`） |
+
+> 提示：SPA 的文案会被打进 JS bundle，`index.html` 里看不到。判断"线上到底换了哪一版"要用
+> 资源文件名里的内容哈希（vite 默认带），或直接比对 `index.html` 本身。
+

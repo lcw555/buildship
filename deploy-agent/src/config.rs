@@ -275,6 +275,7 @@ pub fn strip_verbatim(path: &Path) -> PathBuf {
 /// 词法层面规范化：去掉 `.`、折叠重复分隔符、消解 `..`，不做 IO。
 pub fn normalize_lexically(path: &Path) -> PathBuf {
     use std::path::Component;
+    let path = strip_verbatim(path);
     let mut out = PathBuf::new();
     for component in path.components() {
         match component {

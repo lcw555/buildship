@@ -17,3 +17,8 @@ tracing = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 uuid = { workspace = true }
+
+[dev-dependencies]
+buildship-build = { workspace = true }
+buildship-artifact = { workspace = true }
+buildship-domain = { workspace = true }

@@ -40,35 +40,70 @@ fn is_windows_script(program: &str) -> bool {
     lower.ends_with(".cmd") || lower.ends_with(".bat")
 }
 
+/// Windows 上把裸名字（`yarn`、`npm`）解析成 PATH 里的真实文件。
+///
+/// 必要性：`CreateProcess` 只自动补 `.exe`，而 npm/yarn/pnpm 在很多环境下
+/// 是 `npm.cmd` 这类批处理垫片（标准 Node 安装、nvm-windows、Volta 的 shim 目录）。
+/// 不解析就会直接报 `program not found`，构建第一步就挂。
+fn resolve_program(program: &str) -> String {
+    if !cfg!(windows) {
+        return program.to_string();
+    }
+    let has_separator = program.contains('\\') || program.contains('/');
+    if Path::new(program).is_absolute() || has_separator {
+        return program.to_string();
+    }
+    resolve_binary(program)
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_else(|| program.to_string())
+}
+
 /// 在 PATH 中查找可执行文件（Windows 会按 PATHEXT 尝试扩展名）。
 pub fn resolve_binary(name: &str) -> Option<PathBuf> {
     let path_var = std::env::var_os("PATH")?;
-    if cfg!(windows) {
-        let exts: Vec<String> = std::env::var("PATHEXT")
-            .unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string())
-            .split(';')
-            .filter(|s| !s.is_empty())
-            .map(|s| s.to_ascii_lowercase())
-            .collect();
-        for dir in std::env::split_paths(&path_var) {
-            // 已带扩展名则直接判断
+    resolve_in_path(&path_var, name)
+}
+
+/// 可测的解析核心：给定 PATH 与名字，返回真实可执行文件。
+///
+/// Windows 关键点：npm/yarn/pnpm 常同时存在`无扩展名脚本`与 `.cmd` 垫片
+/// （npm 包的 `bin` 目录、Git Bash 的软链）。`CreateProcess` 只认 PATHEXT 里的
+/// 扩展名，返回无扩展名的文件会得到 `os error 193（不是有效的 Win32 应用程序）`。
+/// 因此：名字本身没有扩展名时，只按 PATHEXT 匹配，不直接采用同名无扩展名文件。
+#[cfg(windows)]
+fn resolve_in_path(path_var: &std::ffi::OsStr, name: &str) -> Option<PathBuf> {
+    let has_ext = Path::new(name).extension().is_some();
+    let exts: Vec<String> = std::env::var("PATHEXT")
+        .unwrap_or_else(|_| ".COM;.EXE;.BAT;.CMD".to_string())
+        .split(';')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_ascii_lowercase())
+        .collect();
+    for dir in std::env::split_paths(path_var) {
+        if has_ext {
             let direct = dir.join(name);
             if direct.is_file() {
                 return Some(direct);
             }
-            for ext in &exts {
-                let candidate = dir.join(format!("{name}{ext}"));
-                if candidate.is_file() {
-                    return Some(candidate);
-                }
-            }
+            continue;
         }
-    } else {
-        for dir in std::env::split_paths(&path_var) {
-            let candidate = dir.join(name);
+        for ext in &exts {
+            let candidate = dir.join(format!("{name}{ext}"));
             if candidate.is_file() {
                 return Some(candidate);
             }
+        }
+    }
+    None
+}
+
+/// 非 Windows：PATH 里同名文件即为可执行文件。
+#[cfg(not(windows))]
+fn resolve_in_path(path_var: &std::ffi::OsStr, name: &str) -> Option<PathBuf> {
+    for dir in std::env::split_paths(path_var) {
+        let candidate = dir.join(name);
+        if candidate.is_file() {
+            return Some(candidate);
         }
     }
     None
@@ -107,12 +142,13 @@ impl CommandSpec {
     /// Windows 下的 `.cmd` 通过 `cmd.exe /d /c` 启动，参数逐个传递，
     /// 由 Rust 负责给含空格的参数加引号（我们已禁止参数内含引号）。
     pub fn to_spawn(&self) -> (String, Vec<String>) {
-        if cfg!(windows) && is_windows_script(&self.program) {
-            let mut args = vec!["/d".to_string(), "/c".to_string(), self.program.clone()];
+        let program = resolve_program(&self.program);
+        if cfg!(windows) && is_windows_script(&program) {
+            let mut args = vec!["/d".to_string(), "/c".to_string(), program];
             args.extend(self.args.iter().cloned());
             ("cmd.exe".to_string(), args)
         } else {
-            (self.program.clone(), self.args.clone())
+            (program, self.args.clone())
         }
     }
 
@@ -173,9 +209,17 @@ impl CommandSpec {
         }
 
         cmd.spawn().map_err(|e| {
+            let hint = if e.kind() == std::io::ErrorKind::NotFound {
+                format!(
+                    "（在 PATH 中找不到 `{}`，请确认已安装并加入 PATH）",
+                    self.program
+                )
+            } else {
+                String::new()
+            };
             AppError::new(
                 buildship_common::ErrorCode::ProcessFailed,
-                format!("启动命令失败 {}：{e}", self.display()),
+                format!("启动命令失败 {}：{e}{hint}", self.display()),
             )
         })
     }
@@ -302,5 +346,61 @@ mod tests {
     fn display_quotes_spaces() {
         let spec = CommandSpec::new("npm", vec!["run".into(), "build:app".into()], ".");
         assert_eq!(spec.display(), "npm run build:app");
+    }
+
+    /// 绝对路径的 `.cmd` 必须走 `cmd.exe /d /c`，否则 CreateProcess 无法执行批处理
+    #[cfg(windows)]
+    #[test]
+    fn cmd_script_goes_through_cmd_exe() {
+        let spec = CommandSpec::new(r"C:\tools\pnpm.cmd", vec!["build".into()], ".");
+        let (program, args) = spec.to_spawn();
+        assert_eq!(program.to_ascii_lowercase(), "cmd.exe");
+        assert_eq!(args[0], "/d");
+        assert_eq!(args[1], "/c");
+        assert_eq!(args[2], r"C:\tools\pnpm.cmd");
+        assert_eq!(args[3], "build");
+    }
+
+    /// 裸名字解析失败时保持原样（由 spawn 给出可读错误），不能 panic
+    #[test]
+    fn unresolved_bare_name_is_kept_as_is() {
+        let spec = CommandSpec::new("definitely-not-installed-pm", Vec::new(), ".");
+        let (program, args) = spec.to_spawn();
+        if cfg!(windows) {
+            assert_eq!(program, "definitely-not-installed-pm");
+            assert!(args.is_empty());
+        } else {
+            assert_eq!(program, "definitely-not-installed-pm");
+        }
+    }
+
+    /// 同名无扩展名文件存在时，必须优先选 PATHEXT 里的 `.cmd`，
+    /// 否则 spawn 会报 os error 193（不是有效的 Win32 应用程序）。
+    #[cfg(windows)]
+    #[test]
+    fn picks_pathext_shim_over_extensionless_file() {
+        let dir = std::env::temp_dir().join("buildship-resolve-pathext-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("fakepm"), b"#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::write(dir.join("fakepm.cmd"), b"@echo off\r\n").unwrap();
+
+        let path_var = std::env::join_paths([dir.as_os_str()]).unwrap();
+        let found = resolve_in_path(&path_var, "fakepm").expect("应能解析到 shim");
+        let has_cmd_ext = std::env::var("PATHEXT")
+            .unwrap_or_default()
+            .to_ascii_lowercase()
+            .contains(".cmd");
+        if has_cmd_ext {
+            assert_eq!(
+                found
+                    .extension()
+                    .map(|e| e.to_string_lossy().to_lowercase()),
+                Some("cmd".to_string())
+            );
+        } else {
+            // 没有 .CMD 的环境中不应退化成无扩展名文件
+            assert!(found.is_file());
+        }
     }
 }
